@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import Depends
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,8 +12,15 @@ from app.gateway.services.llm_client import MockLLM
 from app.gateway.services.tts_client import TTSClient
 
 
-# DB session
+# DB session (for FastAPI Depends)
 async def get_db() -> AsyncSession:
+    async with SessionLocal() as session:
+        yield session
+
+
+# DB session (for manual context manager - WebSocket 등)
+@asynccontextmanager
+async def get_db_context() -> AsyncSession:
     async with SessionLocal() as session:
         yield session
 

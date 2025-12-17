@@ -34,7 +34,6 @@ async def ws_chat(
             t0 = time.perf_counter()
             ttft_written = False
             ttaf_written = False
-            assistant_buf = []
             
             try:
                 async for event in orchestrator.stream_events(session_id, user_text):
@@ -46,8 +45,6 @@ async def ws_chat(
                             await set_ttft(db, turn_id, ttft_ms)
                             ttft_written = True
 
-                        token = event.get("text")
-                        assistant_buf.append(token)
                         await ws.send_json(event)
                         continue
 
@@ -61,7 +58,7 @@ async def ws_chat(
                         continue
 
                     if event_type == "done":
-                        assistant_text = "".join(assistant_buf).strip() or None
+                        assistant_text = event.get("assistant_text")
                         await finalize_turn(db, turn_id, assistant_text)
                         await ws.send_json(event)
                         break
@@ -69,7 +66,7 @@ async def ws_chat(
                     await ws.send_json(event)
                     
             except Exception as e:
-                assistant_text = "".join(assistant_buf).strip() or None
+                assistant_text = event.get("assistant_text") or None
                 await finalize_turn(db, turn_id, assistant_text)
                 await ws.send_json({"type": "error", "message": str(e)})
 

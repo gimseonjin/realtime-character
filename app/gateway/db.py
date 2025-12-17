@@ -1,7 +1,9 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from redis.asyncio import Redis
 
 from app.gateway.config import settings
 
+# Postgres
 engine = create_async_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
@@ -14,3 +16,11 @@ SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 async def get_db() -> AsyncSession:
     async with SessionLocal() as session:
         yield session
+
+
+# Cache (Redis)
+cache: Redis = Redis.from_url(settings.CACHE_URL, decode_responses=True)
+
+
+async def get_cache() -> Redis:
+    return cache

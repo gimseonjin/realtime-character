@@ -10,6 +10,7 @@ from app.gateway.services.orchestrator import Orchestrator
 from app.gateway.services.session_store import SessionStore
 from app.gateway.services.llm_client import MockLLM
 from app.gateway.services.tts_client import TTSClient
+from app.gateway.services.turn_service import TurnService
 
 
 # DB session (for FastAPI Depends)
@@ -41,4 +42,10 @@ def get_orchestrator(
     llm = MockLLM()
     tts = TTSClient(base_url=settings.TTS_URL)
     return Orchestrator(store=store, llm=llm, tts=tts)
+
+
+def get_turn_service(
+    orchestrator: Orchestrator = Depends(get_orchestrator),
+) -> TurnService:
+    return TurnService(orchestrator=orchestrator)
 

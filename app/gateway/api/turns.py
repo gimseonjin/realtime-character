@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.gateway.db import get_db
+from app.gateway.dependencies import get_db
 from app.gateway.repositories.session_repo import upsert_session
 from app.gateway.repositories.turn_repo import create_turn, set_ttft, set_ttaf, finalize_turn, get_recent_turns
 

@@ -3,7 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 
-from app.gateway.db import get_cache, get_db
+from app.gateway.dependencies import get_cache, get_db
 
 router = APIRouter()
 

@@ -3,9 +3,8 @@ import time
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 
-from app.gateway.dependencies import get_orchestrator
+from app.gateway.dependencies import get_orchestrator, get_db
 from app.gateway.services.orchestrator import Orchestrator
-from app.gateway.db import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.gateway.repositories.session_repo import upsert_session
 from app.gateway.repositories.turn_repo import finalize_turn, set_ttaf, set_ttft, create_turn

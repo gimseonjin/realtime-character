@@ -3,7 +3,7 @@ import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 
 from app.gateway.dependencies import get_turn_service, get_db_context
-from app.gateway.services.turn_service import TurnService
+from app.gateway.services.turn import TurnService
 
 router = APIRouter()
 

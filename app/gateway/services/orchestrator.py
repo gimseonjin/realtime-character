@@ -1,21 +1,21 @@
 import asyncio
 import base64
 
-from app.gateway.services.tts_client import TTSClient
-from app.gateway.services.llm_client import MockLLM
-from app.gateway.services.session_store import SessionStore
+from app.gateway.clients.tts import TTSClient
+from app.gateway.clients.llm import MockLLM
+from app.gateway.clients.cache import CacheClient
 
 PUNCT = {".", "?", "!", "\n"}
 
 class Orchestrator:
-    def __init__(self, store: SessionStore, tts: TTSClient, llm: MockLLM):
-        self.store = store
+    def __init__(self, cache_client: CacheClient, tts: TTSClient, llm: MockLLM):
+        self.cache_client = cache_client
         self.llm = llm
         self.tts = tts
 
     async def stream_events(self, session_id: str, user_text: str):
-        history = await self.store.get_history(session_id)
-        self.store.append_user(session_id, user_text)
+        history = await self.cache_client.get_history(session_id)
+        self.cache_client.append_user(session_id, user_text)
 
         user_msg = {"role": "user", "text": user_text}
         llm_history = history + [user_msg]
@@ -60,8 +60,8 @@ class Orchestrator:
 
             assistant_text = "".join(assistant_buf).strip() or None
             if assistant_text:
-                self.store.append_assistant(session_id, assistant_text)
-                await self.store.flush_last_turn_to_cache(session_id, user_text, assistant_text)
+                self.cache_client.append_assistant(session_id, assistant_text)
+                await self.cache_client.flush_last_turn_to_cache(session_id, user_text, assistant_text)
 
             await event_q.put({"type": "done", "assistant_text": assistant_text})
 

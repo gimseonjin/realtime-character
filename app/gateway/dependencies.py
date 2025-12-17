@@ -7,10 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.gateway.config import settings
 from app.gateway.db import SessionLocal, cache
 from app.gateway.services.orchestrator import Orchestrator
-from app.gateway.services.session_store import SessionStore
-from app.gateway.services.llm_client import MockLLM
-from app.gateway.services.tts_client import TTSClient
-from app.gateway.services.turn_service import TurnService
+from app.gateway.services.turn import TurnService
+from app.gateway.clients.llm import MockLLM
+from app.gateway.clients.tts import TTSClient
+from app.gateway.clients.cache import CacheClient
 
 
 # DB session (for FastAPI Depends)
@@ -31,17 +31,18 @@ async def get_cache() -> Redis:
     return cache
 
 
+# Clients
+def get_cache_client(redis: Redis = Depends(get_cache)) -> CacheClient:
+    return CacheClient(cache=redis, max_turns=10)
+
+
 # Services
-def get_session_store(redis: Redis = Depends(get_cache)) -> SessionStore:
-    return SessionStore(cache=redis, max_turns=10)
-
-
 def get_orchestrator(
-    store: SessionStore = Depends(get_session_store),
+    cache_client: CacheClient = Depends(get_cache_client),
 ) -> Orchestrator:
     llm = MockLLM()
     tts = TTSClient(base_url=settings.TTS_URL)
-    return Orchestrator(store=store, llm=llm, tts=tts)
+    return Orchestrator(cache_client=cache_client, llm=llm, tts=tts)
 
 
 def get_turn_service(

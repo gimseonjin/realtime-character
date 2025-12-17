@@ -4,7 +4,9 @@ from collections import defaultdict, deque
 from redis.asyncio import Redis
 
 
-class SessionStore:
+class CacheClient:
+    """Redis 기반 세션 히스토리 캐시 (LLM 컨텍스트용)"""
+
     def __init__(
         self,
         cache: Redis,
@@ -14,7 +16,6 @@ class SessionStore:
         self._cache = cache
         self._max_turns = max_turns
         self._ttl = ttl_seconds
-
         self._hist = defaultdict(lambda: deque(maxlen=max_turns * 2))
 
     def _key(self, session_id: str) -> str:

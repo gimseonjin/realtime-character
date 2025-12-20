@@ -10,6 +10,7 @@ from alembic import context
 from app.shared.db_base import Base
 from app.gateway.models.session import Session
 from app.gateway.models.turn import Turn
+from app.gateway.models.character import Character
 
 # Load .env from project root
 load_dotenv()

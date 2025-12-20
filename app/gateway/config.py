@@ -18,5 +18,8 @@ class Settings(BaseSettings):
     OPENAI_LLM_MAX_TOKENS: int = 1024
     OPENAI_LLM_SYSTEM_PROMPT: str | None = None
 
+    # Logging
+    LOG_JSON: bool = True  # False for colored console output (dev)
+
 
 settings = Settings()

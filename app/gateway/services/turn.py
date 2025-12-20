@@ -8,6 +8,9 @@ from app.gateway.repositories.turn_repo import create_turn, set_ttft, set_ttaf, 
 from app.gateway.clients.cache import CacheClient
 from app.gateway.models.character import Character
 from app.gateway.services.orchestrator import Orchestrator
+from app.shared.logging import get_logger
+
+logger = get_logger(__name__)
 
 OrchestratorFactory = Callable[[Character, CacheClient], Orchestrator]
 
@@ -35,18 +38,23 @@ class TurnService:
         result = await get_session_with_character(db, session_id)
 
         if result is None:
+            logger.warning("session_not_found", session_id=session_id)
             raise ValueError(f"Session not found: {session_id}")
 
         _session, character = result
         if character is None:
+            logger.warning("character_not_bound", session_id=session_id)
             raise ValueError(f"Session {session_id} has no character bound")
 
         await update_session_last_seen(db, session_id)
         orchestrator = self._orchestrator_factory(character, self._cache_client)
 
         turn_id = await create_turn(db, session_id, user_text)
+        logger.info("turn_started", session_id=session_id, turn_id=turn_id, character_id=character.id)
 
         t0 = time.perf_counter()
+        ttft_ms = None
+        ttaf_ms = None
         ttft_written = False
         ttaf_written = False
         assistant_text = None
@@ -68,9 +76,19 @@ class TurnService:
                 if event_type == "done":
                     assistant_text = event.get("assistant_text")
                     await finalize_turn(db, turn_id, assistant_text)
+                    duration_ms = int((time.perf_counter() - t0) * 1000)
+                    logger.info(
+                        "turn_completed",
+                        session_id=session_id,
+                        turn_id=turn_id,
+                        ttft_ms=ttft_ms,
+                        ttaf_ms=ttaf_ms,
+                        duration_ms=duration_ms,
+                    )
 
                 yield event
 
         except Exception as e:
             await finalize_turn(db, turn_id, assistant_text)
+            logger.error("turn_error", session_id=session_id, turn_id=turn_id, error=str(e))
             yield {"type": "error", "message": str(e)}

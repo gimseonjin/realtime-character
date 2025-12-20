@@ -1,12 +1,17 @@
 import io
 import math
 import struct
+import time
 import wave
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 
 import httpx
+
+from app.shared.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class OpenAIVoice(str, Enum):
@@ -100,6 +105,7 @@ class OpenAISynthesizer(BaseSynthesizer):
 
     def synthesize(self, text: str, options: SynthesizeOptions | None = None) -> bytes:
         opts = options or SynthesizeOptions(voice=self.default_voice)
+        t0 = time.perf_counter()
 
         try:
             with httpx.Client(timeout=30.0) as client:
@@ -117,8 +123,18 @@ class OpenAISynthesizer(BaseSynthesizer):
                     },
                 )
                 response.raise_for_status()
+                duration_ms = int((time.perf_counter() - t0) * 1000)
+                logger.info(
+                    "tts_synthesized",
+                    provider="openai",
+                    voice=opts.voice.value,
+                    text_len=len(text),
+                    audio_bytes=len(response.content),
+                    duration_ms=duration_ms,
+                )
                 return response.content
         except httpx.HTTPStatusError as e:
+            logger.error("tts_error", provider="openai", status_code=e.response.status_code)
             if e.response.status_code == 401:
                 raise SynthesizerError("Invalid OpenAI API key") from e
             elif e.response.status_code == 429:
@@ -126,6 +142,8 @@ class OpenAISynthesizer(BaseSynthesizer):
             else:
                 raise SynthesizerError(f"OpenAI API error: {e.response.status_code}") from e
         except httpx.TimeoutException as e:
+            logger.error("tts_error", provider="openai", error="timeout")
             raise SynthesizerError("OpenAI API timeout") from e
         except httpx.RequestError as e:
+            logger.error("tts_error", provider="openai", error=str(e))
             raise SynthesizerError(f"Network error: {e}") from e

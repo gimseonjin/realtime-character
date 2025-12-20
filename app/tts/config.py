@@ -16,5 +16,8 @@ class Settings(BaseSettings):
     OPENAI_TTS_MODEL: str = "tts-1"  # "tts-1" | "tts-1-hd"
     OPENAI_TTS_VOICE: str = "alloy"  # alloy, echo, fable, onyx, nova, shimmer
 
+    # Logging
+    LOG_JSON: bool = True
+
 
 settings = Settings()

@@ -22,6 +22,7 @@ show_help() {
     echo "  gateway       Run Gateway service (port 8000)"
     echo "  tts           Run TTS service (port 8001)"
     echo "  all           Run both Gateway and TTS services"
+    echo "  web           Run Web frontend (port 3000)"
     echo "  help          Show this help message"
 }
 
@@ -91,6 +92,11 @@ run_all() {
     wait
 }
 
+run_web() {
+    echo "Starting Web frontend on port 3000..."
+    cd app/web && npm run dev
+}
+
 case "${1:-help}" in
     venv)
         activate_venv
@@ -115,6 +121,9 @@ case "${1:-help}" in
         ;;
     all)
         run_all
+        ;;
+    web)
+        run_web
         ;;
     help|--help|-h)
         show_help

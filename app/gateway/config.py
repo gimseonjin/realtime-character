@@ -8,5 +8,15 @@ class Settings(BaseSettings):
     DATABASE_URL: str | None = None
     CACHE_URL: str | None = None
 
+    # LLM Provider selection: "mock" | "openai"
+    LLM_PROVIDER: str = "mock"
+
+    # OpenAI LLM settings
+    OPENAI_API_KEY: str | None = None
+    OPENAI_LLM_MODEL: str = "gpt-4o-mini"
+    OPENAI_LLM_TEMPERATURE: float = 0.7
+    OPENAI_LLM_MAX_TOKENS: int = 1024
+    OPENAI_LLM_SYSTEM_PROMPT: str | None = None
+
 
 settings = Settings()

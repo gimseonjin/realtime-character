@@ -17,7 +17,9 @@ async def ws_chat(
     try:
         while True:
             raw = await ws.receive_text()
-            msg = json.loads(raw)
+            # 제어 문자 제거
+            clean = "".join(ch for ch in raw if ch >= " ").strip()
+            msg = json.loads(clean)
 
             session_id = msg["sessionId"]
             user_text = msg["text"]

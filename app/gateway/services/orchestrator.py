@@ -2,13 +2,15 @@ import asyncio
 import base64
 
 from app.gateway.clients.tts import TTSClient
-from app.gateway.clients.llm import MockLLM
+from app.gateway.clients.llm import BaseLLM
 from app.gateway.clients.cache import CacheClient
+from app.gateway.schemas.message import Message
 
 PUNCT = {".", "?", "!", "\n"}
 
+
 class Orchestrator:
-    def __init__(self, cache_client: CacheClient, tts: TTSClient, llm: MockLLM):
+    def __init__(self, cache_client: CacheClient, tts: TTSClient, llm: BaseLLM):
         self.cache_client = cache_client
         self.llm = llm
         self.tts = tts
@@ -17,7 +19,7 @@ class Orchestrator:
         history = await self.cache_client.get_history(session_id)
         self.cache_client.append_user(session_id, user_text)
 
-        user_msg = {"role": "user", "text": user_text}
+        user_msg = Message(role="user", content=user_text)
         llm_history = history + [user_msg]
 
         event_q: asyncio.Queue[dict] = asyncio.Queue()

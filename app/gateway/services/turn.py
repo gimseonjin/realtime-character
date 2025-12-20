@@ -1,16 +1,21 @@
 import time
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.gateway.services.orchestrator import Orchestrator
-from app.gateway.repositories.session_repo import upsert_session
+from app.gateway.repositories.session_repo import get_session_with_character, update_session_last_seen
 from app.gateway.repositories.turn_repo import create_turn, set_ttft, set_ttaf, finalize_turn
+from app.gateway.clients.cache import CacheClient
+from app.gateway.models.character import Character
+from app.gateway.services.orchestrator import Orchestrator
+
+OrchestratorFactory = Callable[[Character, CacheClient], Orchestrator]
 
 
 class TurnService:
-    def __init__(self, orchestrator: Orchestrator):
-        self.orchestrator = orchestrator
+    def __init__(self, orchestrator_factory: OrchestratorFactory, cache_client: CacheClient):
+        self._orchestrator_factory = orchestrator_factory
+        self._cache_client = cache_client
 
     async def process_message(
         self,
@@ -19,13 +24,26 @@ class TurnService:
         user_text: str,
     ) -> AsyncGenerator[dict, None]:
         """
-        1. 세션 upsert
-        2. 턴 생성
-        3. LLM+TTS 스트리밍 (Orchestrator 위임)
-        4. TTFT/TTAF 기록
-        5. 턴 완료
+        1. 세션에서 캐릭터 조회
+        2. 캐릭터 설정으로 Orchestrator 생성 (또는 기본 사용)
+        3. 턴 생성
+        4. LLM+TTS 스트리밍
+        5. TTFT/TTAF 기록
+        6. 턴 완료
         """
-        await upsert_session(db, session_id)
+        # Get session and character
+        result = await get_session_with_character(db, session_id)
+
+        if result is None:
+            raise ValueError(f"Session not found: {session_id}")
+
+        _session, character = result
+        if character is None:
+            raise ValueError(f"Session {session_id} has no character bound")
+
+        await update_session_last_seen(db, session_id)
+        orchestrator = self._orchestrator_factory(character, self._cache_client)
+
         turn_id = await create_turn(db, session_id, user_text)
 
         t0 = time.perf_counter()
@@ -34,7 +52,7 @@ class TurnService:
         assistant_text = None
 
         try:
-            async for event in self.orchestrator.stream_events(session_id, user_text):
+            async for event in orchestrator.stream_events(session_id, user_text):
                 event_type = event.get("type")
 
                 if event_type == "token" and not ttft_written:
